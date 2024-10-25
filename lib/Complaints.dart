@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -34,7 +36,8 @@ class _complaincollectionState extends State<complaincollection> {
   final TextEditingController customerNameController = TextEditingController();
   final TextEditingController mobileNoController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
-  final TextEditingController dateController = TextEditingController();
+  final TextEditingController dateController1 = TextEditingController();
+  final TextEditingController dateController2 = TextEditingController();
 
   String? _selectedValue;
 
@@ -43,9 +46,37 @@ class _complaincollectionState extends State<complaincollection> {
     super.initState();
     _selectedValue = 'Iron';
   }
+  @override
+  void dispose() {
+    customerNameController.dispose();
+    mobileNoController.dispose();
+    addressController.dispose();
+    dateController1.dispose();
+    dateController2.dispose();
+    super.dispose();
+  }
 
+Future<void> createservicerequest() async {
+var url='http://localhost:3000/api/addcomplaint';
+
+  var response = await http.post(Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({
+        'fields':{
+        'customerName': customerNameController.text,
+        'mobileNo': mobileNoController.text,
+        'address': addressController.text,
+        'date1': dateController1.text,
+        'date2': dateController2.text,
+        'category': _selectedValue!,
+        }
+        }
+      ));
+}
   // Add more controllers as per your UI design
-  Future<void> _selectDate(BuildContext context) async {
+  Future<void> _selectpurchaseDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       fieldLabelText: 'Purchase date',
       context: context,
@@ -58,7 +89,7 @@ class _complaincollectionState extends State<complaincollection> {
     if (picked != null) {
       setState(() {
         selectedDate = picked;
-dateController.text = "${picked.toLocal()}".split(' ')[0]; // Update the text field with the selected date
+dateController1.text = "${picked.toLocal()}".split(' ')[0]; // Update the text field with the selected date
      
       });
     }
@@ -152,10 +183,13 @@ DropdownMenuItem(
           ],
         ),
                TextFormField(
-                controller: dateController,
+                controller: dateController1,
                 readOnly: true,
-                onTap: () => _selectDate(context),
+                 decoration: InputDecoration(labelText: "Purchase category"),
+                onTap: () => _selectpurchaseDate(context),
                ),
+
+
               TextFormField(
                 controller: addressController,
                 decoration: InputDecoration(labelText: "Warranty expiry category"),

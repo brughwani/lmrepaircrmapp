@@ -1,48 +1,38 @@
-import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:lmrepaircrmapp/Complaints.dart';
+
 class MyHomePage extends StatefulWidget {
   @override
   _MyHomePageState createState() => _MyHomePageState();
+
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  Future<void> registerUser(String phoneNumber, String password) async {
-    // Call your Node.js backend for registration
-    final response = await http.post(
-      Uri.parse('http://your-node-server/signup'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, String>{
-        'phoneNumber': phoneNumber,
-        'password': password,
-      }),
-    );
-
-    if (response.statusCode == 201) {
-      // User registered successfully
-      print('User registered successfully!');
-    } else {
-      // Handle error
-      print('Error: ${response.body}');
-    }
+  String? selectedValue;
+  
+  @override
+  void initState() {
+    super.initState();
+    selectedValue = '';
   }
 
-  Future<void> loginUser(String phoneNumber, String password) async {
+  
+
+  Future<void> loginUser(String phoneNumber, String password,String role) async {
     // Call your Node.js backend for login
     final response = await http.post(
-      Uri.parse('http://your-node-server/login'),
+      Uri.parse('localhost:3000/loginUser'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
       body: jsonEncode(<String, String>{
         'phoneNumber': phoneNumber,
         'password': password,
+        'role': selectedValue!
       }),
     );
 
@@ -51,8 +41,9 @@ class _MyHomePageState extends State<MyHomePage> {
       final token = jsonDecode(response.body)['token'];
 
       // Sign in with custom token
-      await _auth.signInWithCustomToken(token);
-      print('User authenticated successfully!');
+      
+      Navigator.of(context).push(MaterialPageRoute(builder: (context)=>MyApp()));
+      
     } else {
       // Handle error
       print('Error: ${response.body}');
@@ -61,6 +52,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    TextEditingController phoneNumber=TextEditingController();
+    TextEditingController password=TextEditingController();
     return Scaffold(
       appBar: AppBar(
         title: Text('Login Page'),
@@ -69,18 +62,55 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            
-            ElevatedButton(
-              onPressed: () => registerUser('1234567890', 'yourPassword'),
-              child: Text('Register'),
+            TextFormField(
+              controller: phoneNumber,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(labelText: "Phone Number"),
+
             ),
+            TextFormField(
+              keyboardType: TextInputType.visiblePassword,
+              controller: password,
+              decoration: InputDecoration(
+                
+                labelText: "Password"),
+
+            ),
+            DropdownButton(
+              hint: Text('Select Role'),
+              value: selectedValue,
+              items: [
+              DropdownMenuItem(
+                child: Text('Karigar'),
+                value: 'Karigar',
+                ),
+              DropdownMenuItem(
+                child: Text('Support'),
+                value: 'Support',
+                ),
+                
+          ], onChanged: (value) {
+            setState(() {
+              selectedValue = value;
+            });
+          },),
+            
+            Row(
+              children: [
+          
             ElevatedButton(
-              onPressed: () => loginUser('1234567890', 'yourPassword'),
+              onPressed: () => loginUser(phoneNumber.text,password.text,selectedValue!),
               child: Text('Login'),
             ),
           ],
-        ),
-      ),
+            ),
+             ],
+      )
+         ),
+         
     );
+        
+      
+    
   }
 }
