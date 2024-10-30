@@ -30,12 +30,21 @@ class complaincollection extends StatefulWidget {
 class _complaincollectionState extends State<complaincollection> {
  final _formKey = GlobalKey<FormState>();
  DateTime? selectedDate;
- 
+ DateTime? selectedDate2;
+ List<String> products=[];
+ List<String> categories = [];
+ String? selectedCategory;
+ String? request;
 
   // Controllers for form fields
   final TextEditingController customerNameController = TextEditingController();
   final TextEditingController mobileNoController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
+  final TextEditingController pincode=TextEditingController();
+  final TextEditingController city=TextEditingController();
+  final TextEditingController productname=TextEditingController();
+  final TextEditingController complain=TextEditingController();
+
   final TextEditingController dateController1 = TextEditingController();
   final TextEditingController dateController2 = TextEditingController();
 
@@ -44,36 +53,89 @@ class _complaincollectionState extends State<complaincollection> {
   @override
   void initState() {
     super.initState();
-    _selectedValue = 'Iron';
+   // _selectedValue = 'Iron';
+    request='Complain';
+    fetchCategories();
   }
   @override
   void dispose() {
     customerNameController.dispose();
     mobileNoController.dispose();
     addressController.dispose();
+    city.dispose();
+    pincode.dispose();
     dateController1.dispose();
     dateController2.dispose();
     super.dispose();
   }
+ Future<void> fetchCategories() async {
+   final response = await http.get(
+     Uri.parse('http://localhost:3000/api/category'),
+     headers: {
+       'Content-Type': 'application/json',
+     },
+   );
 
-Future<void> createservicerequest() async {
-var url='http://localhost:3000/api/addcomplaint';
+   if (response.statusCode == 200) {
+     final List<dynamic> categoryList = json.decode(response.body);
+     setState(() {
+       categories = categoryList.map((category) => category.toString()).toList();
+     });
+   } else {
+     throw Exception('Failed to load categories');
+   }
+ }
+
+ Future<void> fetchProductsForCategory(String categoryId) async {
+   final response = await http.get(
+       Uri.parse('http://localhost:3000/api/product?category=$categoryId'),
+     headers: {
+   'Content-Type': 'application/json',
+   },
+   );
+//   print(response.body);
+
+   if (response.statusCode == 200) {
+     final List<dynamic> productList = json.decode(response.body);
+     setState(() {
+       products = productList.map((e) => e['productName'].toString()).toList();
+       _selectedValue = null; // Reset product selection when category changes
+     });
+   } else {
+     throw Exception('Failed to load products');
+   }
+ }
+Future<void> createservicerequest(String Name,String phone,String address,String pdate,String wdate,String category,String product,String pincode,String city,String service,String complaint) async {
+var url='http://localhost:3000/api/addcomplaints';
 
   var response = await http.post(Uri.parse(url),
       headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
+        'Content-Type': 'application/json',
       },
       body: jsonEncode({
         'fields':{
-        'customerName': customerNameController.text,
-        'mobileNo': mobileNoController.text,
-        'address': addressController.text,
-        'date1': dateController1.text,
-        'date2': dateController2.text,
-        'category': _selectedValue!,
+
+          "Phone Number":phone,
+          "Customer name": Name,
+          "address": address,
+          "Purchase Date": pdate,
+          "warranty expiry date": wdate,
+          "Complain/Remark": complaint,
+          "City": city,
+          "pincode": pincode,
+          "Request Type": service,
+          "category": category,
+          "product name": product,
         }
         }
       ));
+if (response.statusCode == 200) {
+
+  print('Record created successfully: ${response.body}');
+} else {
+  print('Failed to create record: ${response.statusCode} ${response.body}');
+}
+
 }
   // Add more controllers as per your UI design
   Future<void> _selectpurchaseDate(BuildContext context) async {
@@ -94,6 +156,40 @@ dateController1.text = "${picked.toLocal()}".split(' ')[0]; // Update the text f
       });
     }
   }
+
+  Future<void> getcity (String pincode) async {
+    final response = await http.get(Uri.parse("http://localhost:3000/api/pincode?pincode=$pincode"),headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final cityinfo = data['city'] ?? 'City not found';
+      city.text = cityinfo;
+    } else {
+      city.text = 'Error fetching city';
+    }
+  }
+ Future<void> _selectwarrantyDate(BuildContext context) async {
+   final DateTime? picked = await showDatePicker(
+     fieldLabelText: 'warranty expiry date',
+     context: context,
+     firstDate: DateTime(2000),
+     lastDate: DateTime(2100),
+     initialDate: selectedDate2 ?? DateTime.now(),
+
+     initialDatePickerMode: DatePickerMode.day,
+   );
+   if (picked != null) {
+     setState(() {
+       selectedDate2 = picked;
+       dateController2.text = "${picked.toLocal()}".split(' ')[0]; // Update the text field with the selected date
+
+     });
+   }
+ }
 
   @override
   Widget build(BuildContext context) {
@@ -119,84 +215,90 @@ dateController1.text = "${picked.toLocal()}".split(' ')[0]; // Update the text f
                 controller: addressController,
                 decoration: InputDecoration(labelText: "Address"),
               ),
-              TextFormField(
-                controller: addressController,
+              TextField(
+                controller: pincode,
                 decoration: InputDecoration(labelText: "Pincode"),
+                keyboardType: TextInputType.number,
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    getcity(value);
+                  }
+                }
               ),
               TextFormField(
-                controller: addressController,
+                controller: city,
                 decoration: InputDecoration(labelText: "City"),
+                readOnly: true,
               ),
-              // Add more fields from the form you see in the image
-              TextFormField(
-                controller: addressController,
-                decoration: InputDecoration(labelText: "Product name"),
+
+            DropdownButton(
+                value: _selectedValue,
+
+                items:products.map<DropdownMenuItem<String>>((String product){
+                  return DropdownMenuItem<String>(value:product,child:Text(product,overflow: TextOverflow.ellipsis));}).toList()
+
+                , onChanged:(productselected)
+                {
+                  setState(() {
+                    _selectedValue=productselected;
+                  });
+                }
               ),
  DropdownButton(
-          value: _selectedValue,
+          value: selectedCategory,
           onChanged: (newValue) {
+
             setState(() {
-              _selectedValue = newValue;
+              selectedCategory = newValue as String?;
             });
+            if (newValue != null) {
+              fetchProductsForCategory(newValue); // Fetch products for the selected category
+            }
           },
-          items: [
-            DropdownMenuItem(
-              child: Text('Iron'),
-              value: 'Iron',
-            ),
-            DropdownMenuItem(
-              child: Text('Gas Stove'),
-              value: 'Gas Stove',
-            ),
-            DropdownMenuItem(
-              child: Text('Cooker'),
-              value: 'Cooker',
-            ),
-            DropdownMenuItem(
-              child: Text('Mixer'),
-              value: 'Mixer',
-            ),
-DropdownMenuItem(
-              child: Text('Ceiling Fan'),
-              value: 'Ceiling Fan',
-            ),
-            DropdownMenuItem(
-              child: Text('Tower Fan'),
-              value: 'Tower Fan',
-            ),
-            DropdownMenuItem(
-              child: Text('Table Fan'),
-              value: 'Table Fan',
-            ),
-            DropdownMenuItem(
-              child: Text('Pedestal Fan'),
-              value: 'Pedestal Fan',
-            ),
-            DropdownMenuItem(
-              child: Text('Immersion Rod'),
-              value: 'Immersion Rod',
-            ),
-             DropdownMenuItem(
-              child: Text('Milk Madhani'),
-              value: 'Milk Madhani',
-            ),
-          ],
+   items: categories.map<DropdownMenuItem<String>>((String category) {
+     return DropdownMenuItem<String>(
+       value: category,
+       child: Text(category),
+     );
+   }).toList(),
+
         ),
                TextFormField(
                 controller: dateController1,
                 readOnly: true,
-                 decoration: InputDecoration(labelText: "Purchase category"),
+                 decoration: InputDecoration(labelText: "Purchase date"),
                 onTap: () => _selectpurchaseDate(context),
                ),
 
 
+
               TextFormField(
-                controller: addressController,
-                decoration: InputDecoration(labelText: "Warranty expiry category"),
+                controller: dateController2,
+                readOnly: true,
+                decoration: InputDecoration(labelText: "Warranty expiry date"),
+                onTap: ()=>_selectwarrantyDate(context),
               ),
+              TextField(
+                controller: complain,
+                decoration: InputDecoration(labelText: "complain/remark"),
+              ),
+              DropdownButton(
+                  value:request ,
+                  items:[
+                DropdownMenuItem(value:'Complain',child: Text('Complain'),),
+                    DropdownMenuItem(value:'Service',child: Text('Service'),),
+                    DropdownMenuItem(value:'Installation',child: Text('Installation')),
+                    DropdownMenuItem(value:'demo',child:Text('demo')),
+              ] , onChanged:(servicetype){
+                setState(() {
+                  request=servicetype;
+                });
+              } ),
+
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
+                  createservicerequest(customerNameController.text,mobileNoController.text,addressController.text,dateController1.text,dateController2.text,selectedCategory!,_selectedValue!,city.text,pincode.toString(),request!,complain.text);
                   // Add submit logic here
                 },
                 child: Text("Save"),
