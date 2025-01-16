@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -33,15 +35,21 @@ class _complaincollectionState extends State<complaincollection> {
  DateTime? selectedDate2;
  List<String> products=[];
  List<String> categories = [];
+ List<String> brands=[];
  String? selectedCategory;
+ String? selectedBrand;
  String? request;
 
-  // Controllers for form fields
+
+ //String formattedDate = DateFormat('yyyy-MM-dd').format(datenow.);
+
+
+ // Controllers for form fields
   final TextEditingController customerNameController = TextEditingController();
   final TextEditingController mobileNoController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
   final TextEditingController pincode=TextEditingController();
-  final TextEditingController city=TextEditingController();
+  final TextEditingController citycontroller=TextEditingController();
   final TextEditingController productname=TextEditingController();
   final TextEditingController complain=TextEditingController();
 
@@ -55,77 +63,123 @@ class _complaincollectionState extends State<complaincollection> {
     super.initState();
    // _selectedValue = 'Iron';
     request='Complain';
-    fetchCategories();
+    fetchbrands();
+
   }
   @override
   void dispose() {
     customerNameController.dispose();
     mobileNoController.dispose();
     addressController.dispose();
-    city.dispose();
+    citycontroller.dispose();
     pincode.dispose();
     dateController1.dispose();
     dateController2.dispose();
     super.dispose();
   }
- Future<void> fetchCategories() async {
+
+ void _checkInputLength(String text, int requiredLength) {
+   if (text.length != requiredLength) {
+     HapticFeedback.vibrate(); // Trigger haptic feedback for invalid length
+   }
+ }
+ Future<void> fetchbrands() async
+ {
+   final response= await http.get(
+     Uri.parse('https://crmvercelfun.vercel.app/api/productService?level=brands'),
+     headers: {
+       'Content-Type': 'application/json',
+     },
+   );
+   if(response.statusCode==200)
+     {
+       final List<dynamic> brandlist=jsonDecode(response.body);
+       setState(() {
+         brands=brandlist.map((b)=>b.toString()).toList();
+       });
+
+//print(response.body);
+     }
+   else
+     {
+       throw Exception('Failed to load brands');
+      // print(response.statusCode);
+     }
+
+ }
+
+ Future<void> fetchCategories(String Brand) async {
    final response = await http.get(
-     Uri.parse('http://localhost:3000/api/category'),
+     Uri.parse('https://crmvercelfun.vercel.app/api/productService?level=categories&brand=$Brand'),
      headers: {
        'Content-Type': 'application/json',
      },
    );
 
    if (response.statusCode == 200) {
+     print(response.body);
      final List<dynamic> categoryList = json.decode(response.body);
      setState(() {
+
        categories = categoryList.map((category) => category.toString()).toList();
+
      });
+    // print(categories);
    } else {
      throw Exception('Failed to load categories');
    }
  }
 
- Future<void> fetchProductsForCategory(String categoryId) async {
+ Future<void> fetchProductsForCategory(String Brand,String categoryId) async {
    final response = await http.get(
-       Uri.parse('http://localhost:3000/api/product?category=$categoryId'),
+       Uri.parse('https://crmvercelfun.vercel.app/api/productService?level=products&brand=$Brand&category=$categoryId'),
      headers: {
    'Content-Type': 'application/json',
    },
    );
-//   print(response.body);
+
+  print(response.body);
 
    if (response.statusCode == 200) {
      final List<dynamic> productList = json.decode(response.body);
      setState(() {
-       products = productList.map((e) => e['productName'].toString()).toList();
+       products = productList.map((e) => e['name'].toString()).toList();
        _selectedValue = null; // Reset product selection when category changes
      });
    } else {
      throw Exception('Failed to load products');
    }
  }
-Future<void> createservicerequest(String Name,String phone,String address,String pdate,String wdate,String category,String product,String pincode,String city,String service,String complaint) async {
-var url='http://localhost:3000/api/addcomplaints';
+Future<void> createservicerequest(String Name,String phone,String address,String pincode,String cityname,String brand,String category,String product,String pdate,String wdate,String complaint,String service) async {
+var url='https://crmvercelfun.vercel.app/api/addcomplaint';
+var url2='http://localhost:3000/api/addcomplaint';
+DateTime datenow = DateTime.now();
+print(datenow.toLocal().toString().split(' ')[0]);
+String formattedDate = DateFormat('dd-MM-yyyy').format(datenow);
+print(formattedDate);
+String Date2=datenow.toLocal().toString().split(' ')[0];
 
-  var response = await http.post(Uri.parse(url),
+
+
+var response = await http.post(Uri.parse(url),
       headers: <String, String>{
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
-        'fields':{
-
-          "Phone Number":phone,
+        "fields":{
           "Customer name": Name,
+          "Phone Number":"+91"+phone,
           "address": address,
+          "pincode": pincode,
+          "City": cityname,
+          "Brand":brand,
+          "category":category,
+          "product name":product,
           "Purchase Date": pdate,
           "warranty expiry date": wdate,
           "Complain/Remark": complaint,
-          "City": city,
-          "pincode": pincode,
           "Request Type": service,
-          "category": category,
-          "product name": product,
+    //      "date of complain":formattedDate
         }
         }
       ));
@@ -157,21 +211,7 @@ dateController1.text = "${picked.toLocal()}".split(' ')[0]; // Update the text f
     }
   }
 
-  Future<void> getcity (String pincode) async {
-    final response = await http.get(Uri.parse("http://localhost:3000/api/pincode?pincode=$pincode"),headers: <String, String>{
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
 
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final cityinfo = data['city'] ?? 'City not found';
-      city.text = cityinfo;
-    } else {
-      city.text = 'Error fetching city';
-    }
-  }
  Future<void> _selectwarrantyDate(BuildContext context) async {
    final DateTime? picked = await showDatePicker(
      fieldLabelText: 'warranty expiry date',
@@ -197,113 +237,150 @@ dateController1.text = "${picked.toLocal()}".split(' ')[0]; // Update the text f
       appBar: AppBar(
         title: Text("Manage Complaints"),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: customerNameController,
-                decoration: InputDecoration(labelText: "Customer Name"),
-              ),
-              TextFormField(
-                controller: mobileNoController,
-                decoration: InputDecoration(labelText: "Mobile No"),
-              ),
-              TextFormField(
-                controller: addressController,
-                decoration: InputDecoration(labelText: "Address"),
-              ),
-              TextField(
-                controller: pincode,
-                decoration: InputDecoration(labelText: "Pincode"),
-                keyboardType: TextInputType.number,
-                onSubmitted: (value) {
-                  if (value.isNotEmpty) {
-                    getcity(value);
-                  }
-                }
-              ),
-              TextFormField(
-                controller: city,
-                decoration: InputDecoration(labelText: "City"),
-                readOnly: true,
-              ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: customerNameController,
+                  decoration: InputDecoration(labelText: "Customer Name"),
+                ),
+                TextFormField(
+                    controller: mobileNoController,
+        
+                    decoration: InputDecoration(
+                      labelText: 'Enter Phone Number',
+                      hintText: '10-digit phone number',
+                      border: OutlineInputBorder(),
+                      enabledBorder: mobileNoController.text.length < 10
+                          ? OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.red),
+                      )
+                          : OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.green),
+                      ),
+                      labelStyle: TextStyle(
+                        color:mobileNoController.text.length != 10 ? Colors.red : Colors.green,
+                      ),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        _checkInputLength(val, 10);
+                      });
+                    }
+                ),
+        
+        
+                TextFormField(
+                  controller: addressController,
+                  decoration: InputDecoration(labelText: "Address"),
+                ),
+                TextField(
+                  controller: pincode,
+                  decoration: InputDecoration(labelText: "Pincode",
+                  enabledBorder: pincode.text.length!=6 ? OutlineInputBorder(borderSide:BorderSide(color: Colors.red) ) :
+                      OutlineInputBorder(borderSide:BorderSide(color: Colors.green) )
+                  ),
+            onChanged: (text) {
+        setState(() {
+          _checkInputLength(text,6);
+        });
+            },
+                  keyboardType: TextInputType.number,
+                ),
+                TextFormField(
+                  controller: citycontroller,
+                  decoration: InputDecoration(labelText: "City"),
+                ),
 
-            DropdownButton(
-                value: _selectedValue,
-
-                items:products.map<DropdownMenuItem<String>>((String product){
-                  return DropdownMenuItem<String>(value:product,child:Text(product,overflow: TextOverflow.ellipsis));}).toList()
-
-                , onChanged:(productselected)
-                {
-                  setState(() {
-                    _selectedValue=productselected;
-                  });
-                }
-              ),
- DropdownButton(
-          value: selectedCategory,
-          onChanged: (newValue) {
-
-            setState(() {
-              selectedCategory = newValue as String?;
-            });
-            if (newValue != null) {
-              fetchProductsForCategory(newValue); // Fetch products for the selected category
-            }
-          },
-   items: categories.map<DropdownMenuItem<String>>((String category) {
-     return DropdownMenuItem<String>(
-       value: category,
-       child: Text(category),
-     );
-   }).toList(),
-
-        ),
-               TextFormField(
-                controller: dateController1,
-                readOnly: true,
-                 decoration: InputDecoration(labelText: "Purchase date"),
-                onTap: () => _selectpurchaseDate(context),
-               ),
-
-
-
-              TextFormField(
-                controller: dateController2,
-                readOnly: true,
-                decoration: InputDecoration(labelText: "Warranty expiry date"),
-                onTap: ()=>_selectwarrantyDate(context),
-              ),
-              TextField(
-                controller: complain,
-                decoration: InputDecoration(labelText: "complain/remark"),
-              ),
               DropdownButton(
-                  value:request ,
-                  items:[
-                DropdownMenuItem(value:'Complain',child: Text('Complain'),),
-                    DropdownMenuItem(value:'Service',child: Text('Service'),),
-                    DropdownMenuItem(value:'Installation',child: Text('Installation')),
-                    DropdownMenuItem(value:'demo',child:Text('demo')),
-              ] , onChanged:(servicetype){
+                  value: selectedBrand,
+                  items:brands.map<DropdownMenuItem<String>>((String brnd){
+                return DropdownMenuItem<String>(value:brnd,child:Text(brnd));
+              }).toList() , onChanged:(String? newbrnd){
                 setState(() {
-                  request=servicetype;
+                  selectedBrand=newbrnd;
+                  if(newbrnd!=null) {
+                    print(123);
+                    fetchCategories(newbrnd);
+                  }
                 });
-              } ),
-
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  createservicerequest(customerNameController.text,mobileNoController.text,addressController.text,dateController1.text,dateController2.text,selectedCategory!,_selectedValue!,city.text,pincode.toString(),request!,complain.text);
-                  // Add submit logic here
-                },
-                child: Text("Save"),
-              ),
-            ],
+              }),
+        
+              DropdownButton(
+                  value: _selectedValue,
+        
+                  items:products.map<DropdownMenuItem<String>>((String product){
+                    return DropdownMenuItem<String>(value:product,child:Text(product,overflow: TextOverflow.ellipsis));}).toList()
+        
+                  , onChanged:(productselected)
+                  {
+                    setState(() {
+                      _selectedValue=productselected;
+                    });
+                  }
+                ),
+         DropdownButton(
+            value: selectedCategory,
+            onChanged: (newValue) {
+        
+              setState(() {
+                selectedCategory = newValue as String?;
+              });
+              if (newValue != null) {
+                fetchProductsForCategory(selectedBrand!,newValue); // Fetch products for the selected category
+              }
+            },
+           items: categories.map<DropdownMenuItem<String>>((String category) {
+             return DropdownMenuItem<String>(
+         value: category,
+         child: Text(category),
+             );
+           }).toList(),
+        
+          ),
+                 TextFormField(
+                  controller: dateController1,
+                  readOnly: true,
+                   decoration: InputDecoration(labelText: "Purchase date"),
+                  onTap: () => _selectpurchaseDate(context),
+                 ),
+                TextFormField(
+                  controller: dateController2,
+                  readOnly: true,
+                  decoration: InputDecoration(labelText: "Warranty expiry date"),
+                  onTap: ()=>_selectwarrantyDate(context),
+                ),
+                TextField(
+                  controller: complain,
+                  decoration: InputDecoration(labelText: "complain/remark"),
+                ),
+                DropdownButton(
+                    value:request ,
+                    items:[
+                  DropdownMenuItem(value:'Complain',child: Text('Complain'),),
+                      DropdownMenuItem(value:'Service',child: Text('Service'),),
+                      DropdownMenuItem(value:'Installation',child: Text('Installation')),
+                      DropdownMenuItem(value:'demo',child:Text('demo')),
+                ] , onChanged:(servicetype){
+                  setState(() {
+                    request=servicetype;
+                  });
+                } ),
+        
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    createservicerequest(customerNameController.text,mobileNoController.text,addressController.text,pincode.text,citycontroller.text,selectedBrand!,selectedCategory!,_selectedValue!,dateController1.text,dateController2.text,complain.text,request!);
+                    // Add submit logic here
+                  },
+                  child: Text("Save"),
+                ),
+              ],
+            ),
           ),
         ),
       ),
