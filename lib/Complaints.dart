@@ -3,27 +3,30 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:lmrepaircrmapp/LoginPage.dart';
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Complain detail',
-      theme: ThemeData(
-       
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const complaincollection()
-    );
-  }
-}
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+//
+//   // This widget is the root of your application.
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Complain detail',
+//       theme: ThemeData(
+//
+//         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+//         useMaterial3: true,
+//       ),
+//       home: MyHomePage()
+//     );
+//   }
+// }
 
 class complaincollection extends StatefulWidget {
-  const complaincollection({super.key});
+  final String token;
+
+  const complaincollection({super.key,required this.token});
 
   @override
   State<complaincollection> createState() => _complaincollectionState();
@@ -47,7 +50,9 @@ class _complaincollectionState extends State<complaincollection> {
  // Controllers for form fields
   final TextEditingController customerNameController = TextEditingController();
   final TextEditingController mobileNoController = TextEditingController();
-  final TextEditingController addressController = TextEditingController();
+  final TextEditingController address1Controller = TextEditingController();
+  final TextEditingController address2Controller=TextEditingController();
+  final TextEditingController address3Controller=TextEditingController();
   final TextEditingController pincode=TextEditingController();
   final TextEditingController citycontroller=TextEditingController();
   final TextEditingController productname=TextEditingController();
@@ -70,7 +75,9 @@ class _complaincollectionState extends State<complaincollection> {
   void dispose() {
     customerNameController.dispose();
     mobileNoController.dispose();
-    addressController.dispose();
+    address1Controller.dispose();
+    address2Controller.dispose();
+    address3Controller.dispose();
     citycontroller.dispose();
     pincode.dispose();
     dateController1.dispose();
@@ -83,12 +90,14 @@ class _complaincollectionState extends State<complaincollection> {
      HapticFeedback.vibrate(); // Trigger haptic feedback for invalid length
    }
  }
+
  Future<void> fetchbrands() async
  {
    final response= await http.get(
-     Uri.parse('https://crmvercelfun.vercel.app/api/productService?level=brands'),
+     Uri.parse('https://limsonvercelapi2.vercel.app/api/fsproductservice?level=brands'),
      headers: {
        'Content-Type': 'application/json',
+       'Authorization':'Bearer ${widget.token}',
      },
    );
    if(response.statusCode==200)
@@ -110,9 +119,10 @@ class _complaincollectionState extends State<complaincollection> {
 
  Future<void> fetchCategories(String Brand) async {
    final response = await http.get(
-     Uri.parse('https://crmvercelfun.vercel.app/api/productService?level=categories&brand=$Brand'),
+     Uri.parse('https://limsonvercelapi2.vercel.app/api/fsproductservice?level=categories&brand=$Brand'),
      headers: {
        'Content-Type': 'application/json',
+       'Authorization':'Bearer ${widget.token}',
      },
    );
 
@@ -132,9 +142,10 @@ class _complaincollectionState extends State<complaincollection> {
 
  Future<void> fetchProductsForCategory(String Brand,String categoryId) async {
    final response = await http.get(
-       Uri.parse('https://crmvercelfun.vercel.app/api/productService?level=products&brand=$Brand&category=$categoryId'),
+       Uri.parse('https://limsonvercelapi2.vercel.app/api/fsproductservice?level=products&brand=$Brand&category=$categoryId'),
      headers: {
    'Content-Type': 'application/json',
+       'Authorization':'Bearer ${widget.token}',
    },
    );
 
@@ -151,12 +162,12 @@ class _complaincollectionState extends State<complaincollection> {
    }
  }
 Future<void> createservicerequest(String Name,String phone,String address,String pincode,String cityname,String brand,String category,String product,String pdate,String wdate,String complaint,String service) async {
-var url='https://crmvercelfun.vercel.app/api/addcomplaint';
-var url2='http://localhost:3000/api/addcomplaint';
+var url='https://limsonvercelapi2.vercel.app/api/fsaddcomplaint';
+//var url2='http://localhost:3000/api/addcomplaint';
 DateTime datenow = DateTime.now();
-print(datenow.toLocal().toString().split(' ')[0]);
+//print(datenow.toLocal().toString().split(' ')[0]);
 String formattedDate = DateFormat('dd-MM-yyyy').format(datenow);
-print(formattedDate);
+//print(formattedDate);
 String Date2=datenow.toLocal().toString().split(' ')[0];
 
 
@@ -164,18 +175,19 @@ String Date2=datenow.toLocal().toString().split(' ')[0];
 var response = await http.post(Uri.parse(url),
       headers: <String, String>{
         'Content-Type': 'application/json',
+        'Authorization':'Bearer ${widget.token}',
       },
       body: jsonEncode({
         "fields":{
           "Customer name": Name,
-          "Phone Number":"+91"+phone,
+          "Phone":"+91"+phone,
           "address": address,
           "pincode": pincode,
-          "City": cityname,
+          "city": cityname,
           "Brand":brand,
-          "category":category,
-          "product name":product,
-          "Purchase Date": pdate,
+          "Category":category,
+          "Product name":product,
+          "Purchase date": pdate,
           "warranty expiry date": wdate,
           "Complain/Remark": complaint,
           "Request Type": service,
@@ -223,6 +235,7 @@ dateController1.text = "${picked.toLocal()}".split(' ')[0]; // Update the text f
      initialDatePickerMode: DatePickerMode.day,
    );
    if (picked != null) {
+     print(picked);
      setState(() {
        selectedDate2 = picked;
        dateController2.text = "${picked.toLocal()}".split(' ')[0]; // Update the text field with the selected date
@@ -275,8 +288,16 @@ dateController1.text = "${picked.toLocal()}".split(' ')[0]; // Update the text f
         
         
                 TextFormField(
-                  controller: addressController,
-                  decoration: InputDecoration(labelText: "Address"),
+                  controller: address1Controller,
+                  decoration: InputDecoration(labelText: "Address line 1"),
+                ),
+                TextFormField(
+                  controller: address2Controller,
+                  decoration: InputDecoration(labelText: "Address line 2"),
+                ),
+                TextFormField(
+                  controller: address3Controller,
+                  decoration: InputDecoration(labelText: "Address line 3"),
                 ),
                 TextField(
                   controller: pincode,
@@ -374,7 +395,7 @@ dateController1.text = "${picked.toLocal()}".split(' ')[0]; // Update the text f
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
-                    createservicerequest(customerNameController.text,mobileNoController.text,addressController.text,pincode.text,citycontroller.text,selectedBrand!,selectedCategory!,_selectedValue!,dateController1.text,dateController2.text,complain.text,request!);
+                    createservicerequest(customerNameController.text,mobileNoController.text,address1Controller.text+","+address2Controller.text+","+address3Controller.text,pincode.text,citycontroller.text,selectedBrand!,selectedCategory!,_selectedValue!,dateController1.text,dateController2.text,complain.text,request!);
                     // Add submit logic here
                   },
                   child: Text("Save"),
