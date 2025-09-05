@@ -2,7 +2,7 @@
 on:
   push:
     branches:
-      - master  # Change to your production branch (e.g., master, production)
+      - main  # Change to your production branch (e.g., master, production)
     paths:
       - '**'  # Watch all files
 
