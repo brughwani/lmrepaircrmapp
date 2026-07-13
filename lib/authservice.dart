@@ -43,7 +43,20 @@ class AuthService {
       _scheduleTokenRefresh(token);
       return data;
     } else {
-      throw Exception('Failed to authenticate: ${response.body}');
+      String errorMessage = 'Failed to authenticate';
+      try {
+        final decoded = json.decode(response.body);
+        if (decoded is Map) {
+          errorMessage = decoded['message'] ?? decoded['error'] ?? response.body;
+        } else {
+          errorMessage = response.body;
+        }
+      } catch (_) {
+        if (response.body.isNotEmpty) {
+          errorMessage = response.body;
+        }
+      }
+      throw Exception(errorMessage);
     }
   }
 
