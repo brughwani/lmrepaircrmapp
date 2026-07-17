@@ -587,7 +587,8 @@ class _complaincollectionState extends State<complaincollection> {
                     }),
                 TextFormField(
                   controller: address1Controller,
-                  decoration: InputDecoration(labelText: "Address line 1"),
+                  decoration: const InputDecoration(labelText: "Address line 1 *"),
+                  validator: (value) => (value == null || value.trim().isEmpty) ? 'Address line 1 is required' : null,
                 ),
                 TextFormField(
                   controller: address2Controller,
@@ -597,14 +598,23 @@ class _complaincollectionState extends State<complaincollection> {
                   controller: address3Controller,
                   decoration: InputDecoration(labelText: "Address line 3"),
                 ),
-                TextField(
+                TextFormField(
                   controller: pincode,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Pincode is required';
+                    }
+                    if (value.trim().length != 6) {
+                      return 'Pincode must be exactly 6 digits';
+                    }
+                    return null;
+                  },
                   decoration: InputDecoration(
-                      labelText: "Pincode",
+                      labelText: "Pincode *",
                       enabledBorder: pincode.text.length != 6
-                          ? OutlineInputBorder(
+                          ? const OutlineInputBorder(
                               borderSide: BorderSide(color: Colors.red))
-                          : OutlineInputBorder(
+                          : const OutlineInputBorder(
                               borderSide: BorderSide(color: Colors.green))),
                   onChanged: (text) {
                     setState(() {
@@ -615,10 +625,13 @@ class _complaincollectionState extends State<complaincollection> {
                 ),
                 TextFormField(
                   controller: citycontroller,
-                  decoration: InputDecoration(labelText: "City"),
+                  decoration: const InputDecoration(labelText: "City *"),
+                  validator: (value) => (value == null || value.trim().isEmpty) ? 'City is required' : null,
                 ),
-                DropdownButton(
+                DropdownButtonFormField<String>(
                     value: selectedBrand,
+                    decoration: const InputDecoration(labelText: "Brand *"),
+                    validator: (value) => value == null ? 'Brand is required' : null,
                     items: brands.map<DropdownMenuItem<String>>((String brnd) {
                       return DropdownMenuItem<String>(
                           value: brnd, child: Text(brnd));
@@ -632,8 +645,10 @@ class _complaincollectionState extends State<complaincollection> {
                         }
                       });
                     }),
-                DropdownButton(
+                DropdownButtonFormField<String>(
                     value: _selectedValue,
+                    decoration: const InputDecoration(labelText: "Product *"),
+                    validator: (value) => value == null ? 'Product is required' : null,
                     items: products
                         .map<DropdownMenuItem<String>>((String product) {
                       return DropdownMenuItem<String>(
@@ -646,11 +661,13 @@ class _complaincollectionState extends State<complaincollection> {
                         _selectedValue = productselected;
                       });
                     }),
-                DropdownButton(
+                DropdownButtonFormField<String>(
                   value: selectedCategory,
+                  decoration: const InputDecoration(labelText: "Category *"),
+                  validator: (value) => value == null ? 'Category is required' : null,
                   onChanged: (newValue) {
                     setState(() {
-                      selectedCategory = newValue as String?;
+                      selectedCategory = newValue;
                     });
                     if (newValue != null) {
                       fetchProductsForCategory(selectedBrand!,
@@ -668,23 +685,28 @@ class _complaincollectionState extends State<complaincollection> {
                 TextFormField(
                   controller: dateController1,
                   readOnly: true,
-                  decoration: InputDecoration(labelText: "Purchase date"),
+                  decoration: const InputDecoration(labelText: "Purchase date *"),
+                  validator: (value) => (value == null || value.isEmpty) ? 'Purchase date is required' : null,
                   onTap: () => _selectpurchaseDate(context),
                 ),
                 TextFormField(
                   controller: dateController2,
                   readOnly: true,
                   decoration:
-                      InputDecoration(labelText: "Warranty expiry date"),
+                      const InputDecoration(labelText: "Warranty expiry date *"),
+                  validator: (value) => (value == null || value.isEmpty) ? 'Warranty expiry date is required' : null,
                   onTap: () => _selectwarrantyDate(context),
                 ),
-                TextField(
+                TextFormField(
                   controller: complain,
-                  decoration: InputDecoration(labelText: "complain/remark"),
+                  decoration: const InputDecoration(labelText: "Complain/Remark *"),
+                  validator: (value) => (value == null || value.trim().isEmpty) ? 'Complain/Remark is required' : null,
                 ),
-                DropdownButton(
+                DropdownButtonFormField<String>(
                     value: request,
-                    items: [
+                    decoration: const InputDecoration(labelText: "Request Type *"),
+                    validator: (value) => value == null ? 'Request Type is required' : null,
+                    items: const [
                       DropdownMenuItem(
                         value: 'Complain',
                         child: Text('Complain'),
