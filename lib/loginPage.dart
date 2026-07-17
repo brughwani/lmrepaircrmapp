@@ -57,13 +57,29 @@ class _MyHomePageState extends State<MyHomePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      String displayError = e.toString();
-      if (displayError.startsWith('Exception: ')) {
-        displayError = displayError.replaceFirst('Exception: ', '');
+      String errorMessage = 'Login failed. Please try again.';
+      final errString = e.toString();
+
+      if (errString.contains('401') ||
+          errString.toLowerCase().contains('invalid') ||
+          errString.toLowerCase().contains('unauthorized')) {
+        errorMessage = 'Incorrect phone or password';
+      } else if (errString.contains('network') ||
+          errString.contains('SocketException')) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else {
+        String displayError = errString;
+        if (displayError.startsWith('Exception: ')) {
+          displayError = displayError.replaceFirst('Exception: ', '');
+        }
+        if (displayError != 'Failed to authenticate') {
+          errorMessage = displayError;
+        }
       }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(displayError),
+          content: Text(errorMessage),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
