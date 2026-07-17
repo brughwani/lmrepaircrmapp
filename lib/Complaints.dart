@@ -544,12 +544,27 @@ class _complaincollectionState extends State<complaincollection> {
               children: [
                 TextFormField(
                   controller: customerNameController,
-                  decoration: InputDecoration(labelText: "Customer Name"),
+                  decoration: const InputDecoration(labelText: "Customer Name *"),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Customer Name is required';
+                    }
+                    return null;
+                  },
                 ),
                 TextFormField(
                     controller: mobileNoController,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Phone Number is required';
+                      }
+                      if (value.trim().length != 10) {
+                        return 'Phone Number must be exactly 10 digits';
+                      }
+                      return null;
+                    },
                     decoration: InputDecoration(
-                      labelText: 'Enter Phone Number',
+                      labelText: 'Enter Phone Number *',
                       hintText: '10-digit phone number',
                       border: OutlineInputBorder(),
                       enabledBorder: mobileNoController.text.length < 10
@@ -693,6 +708,9 @@ class _complaincollectionState extends State<complaincollection> {
                   children: [
                     ElevatedButton(
                       onPressed: () async {
+                        if (!_formKey.currentState!.validate()) {
+                          return;
+                        }
                         final complaintNumber = await createservicerequest(
                             customerNameController.text,
                             mobileNoController.text,
