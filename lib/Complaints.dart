@@ -48,6 +48,7 @@ class _complaincollectionState extends State<complaincollection> {
   String? selectedBrand;
   String? request;
   bool _showPdfButton = false;
+  String? _complainNumber;
 
   //String formattedDate = DateFormat('yyyy-MM-dd').format(datenow.);
 
@@ -126,12 +127,28 @@ class _complaincollectionState extends State<complaincollection> {
                         ),
                       ],
                     ),
-                    pw.Text(
-                      DateTime.now().toLocal().toString().split(' ')[0],
-                      style: const pw.TextStyle(
-                        fontSize: 12,
-                        color: PdfColors.grey700,
-                      ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text(
+                          DateTime.now().toLocal().toString().split(' ')[0],
+                          style: const pw.TextStyle(
+                            fontSize: 12,
+                            color: PdfColors.grey700,
+                          ),
+                        ),
+                        if (_complainNumber != null) ...[
+                          pw.SizedBox(height: 4),
+                          pw.Text(
+                            'Complaint No: $_complainNumber',
+                            style: pw.TextStyle(
+                              fontSize: 12,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.blue800,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -382,7 +399,7 @@ class _complaincollectionState extends State<complaincollection> {
     }
   }
 
-  Future<bool> createservicerequest(
+  Future<String?> createservicerequest(
       String name,
       String phone,
       String address,
@@ -425,15 +442,21 @@ class _complaincollectionState extends State<complaincollection> {
           }));
       if (response.statusCode == 200) {
         debugPrint('Record created successfully: ${response.body}');
-        return true;
+        try {
+          final decoded = jsonDecode(response.body);
+          final num = decoded['Complain number']?.toString() ?? decoded['fields']?['Complain number']?.toString() ?? 'N/A';
+          return num;
+        } catch (e) {
+          return 'N/A';
+        }
       } else {
         debugPrint(
             'Failed to create record: ${response.statusCode} ${response.body}');
-        return false;
+        return null;
       }
     } catch (error) {
       debugPrint('Failed to create record: $error');
-      return false;
+      return null;
     }
   }
 
@@ -483,8 +506,7 @@ class _complaincollectionState extends State<complaincollection> {
     if (picked != null) {
       setState(() {
         selectedDate = picked;
-        dateController1.text = "${picked.toLocal()}"
-            .split(' ')[0]; // Update the text field with the selected date
+        dateController1.text = "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
       });
     }
   }
@@ -502,8 +524,7 @@ class _complaincollectionState extends State<complaincollection> {
       print(picked);
       setState(() {
         selectedDate2 = picked;
-        dateController2.text = "${picked.toLocal()}"
-            .split(' ')[0]; // Update the text field with the selected date
+        dateController2.text = "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
       });
     }
   }
@@ -672,7 +693,7 @@ class _complaincollectionState extends State<complaincollection> {
                   children: [
                     ElevatedButton(
                       onPressed: () async {
-                        final complaintSaved = await createservicerequest(
+                        final complaintNumber = await createservicerequest(
                             customerNameController.text,
                             mobileNoController.text,
                             address1Controller.text +
@@ -691,7 +712,7 @@ class _complaincollectionState extends State<complaincollection> {
                             request!);
                         if (!context.mounted) return;
 
-                        if (!complaintSaved) {
+                        if (complaintNumber == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content: Text('Complaint registration failed')),
@@ -701,6 +722,7 @@ class _complaincollectionState extends State<complaincollection> {
 
                         setState(() {
                           _showPdfButton = true;
+                          _complainNumber = complaintNumber;
                         });
 
                         final smsSent = await sendComplaintSms(
