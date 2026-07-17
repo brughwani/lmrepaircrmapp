@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 const String _apiBaseUrl = 'https://limsonvercelapi2.vercel.app';
 const String _addComplaintUrl = '$_apiBaseUrl/api/fsaddcomplaint';
@@ -44,6 +47,7 @@ class _complaincollectionState extends State<complaincollection> {
   String? selectedCategory;
   String? selectedBrand;
   String? request;
+  bool _showPdfButton = false;
 
   //String formattedDate = DateFormat('yyyy-MM-dd').format(datenow.);
 
@@ -83,6 +87,225 @@ class _complaincollectionState extends State<complaincollection> {
     dateController1.dispose();
     dateController2.dispose();
     super.dispose();
+  }
+
+  Future<pw.Document> _generatePdfDocument() async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(32),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Header
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'LM REPAIR SERVICES',
+                          style: pw.TextStyle(
+                            fontSize: 24,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.blue900,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'Service Request Job Sheet',
+                          style: pw.TextStyle(
+                            fontSize: 14,
+                            color: PdfColors.grey700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.Text(
+                      DateTime.now().toLocal().toString().split(' ')[0],
+                      style: const pw.TextStyle(
+                        fontSize: 12,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                pw.Divider(thickness: 2, color: PdfColors.blue900),
+                pw.SizedBox(height: 20),
+
+                // Customer Details Header
+                pw.Text(
+                  'Customer Details',
+                  style: pw.TextStyle(
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blue800,
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                  children: [
+                    _buildPdfTableRow('Customer Name', customerNameController.text),
+                    _buildPdfTableRow('Phone', '+91 ${mobileNoController.text}'),
+                    _buildPdfTableRow('Address', '${address1Controller.text}, ${address2Controller.text}, ${address3Controller.text}'),
+                    _buildPdfTableRow('City', citycontroller.text),
+                    _buildPdfTableRow('Pincode', pincode.text),
+                  ],
+                ),
+                pw.SizedBox(height: 24),
+
+                // Request Details Header
+                pw.Text(
+                  'Request & Appliance Details',
+                  style: pw.TextStyle(
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blue800,
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                  children: [
+                    _buildPdfTableRow('Request Type', request ?? ''),
+                    _buildPdfTableRow('Brand', selectedBrand ?? ''),
+                    _buildPdfTableRow('Category', selectedCategory ?? ''),
+                    _buildPdfTableRow('Product Name', _selectedValue ?? ''),
+                    _buildPdfTableRow('Purchase Date', dateController1.text),
+                    _buildPdfTableRow('Warranty Expiry', dateController2.text),
+                  ],
+                ),
+                pw.SizedBox(height: 24),
+
+                // Complain/Remark Header
+                pw.Text(
+                  'Complain / Remark Details',
+                  style: pw.TextStyle(
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blue800,
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                  ),
+                  child: pw.Text(
+                    complain.text.isNotEmpty ? complain.text : 'No remarks specified.',
+                    style: const pw.TextStyle(fontSize: 12),
+                  ),
+                ),
+                pw.Spacer(),
+
+                // Footer
+                pw.Divider(thickness: 1, color: PdfColors.grey300),
+                pw.SizedBox(height: 8),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Thank you for choosing LM Repair Services',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontStyle: pw.FontStyle.italic,
+                        color: PdfColors.grey600,
+                      ),
+                    ),
+                    pw.Text(
+                      'System Generated Copy',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return pdf;
+  }
+
+  Future<void> _showPdfActions(BuildContext context) async {
+    final pdfDoc = await _generatePdfDocument();
+    final pdfBytes = await pdfDoc.save();
+    final fileName = 'LM_Complaint_${customerNameController.text.replaceAll(' ', '_')}.pdf';
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.print, color: Colors.blueAccent),
+                title: const Text('Print PDF'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await Printing.layoutPdf(
+                    onLayout: (PdfPageFormat format) async => pdfBytes,
+                    name: fileName,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share, color: Colors.green),
+                title: const Text('Share PDF (WhatsApp, Email, etc.)'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await Printing.sharePdf(
+                    bytes: pdfBytes,
+                    filename: fileName,
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  pw.TableRow _buildPdfTableRow(String label, String value) {
+    return pw.TableRow(
+      children: [
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(8),
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11),
+          ),
+        ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(8),
+          child: pw.Text(
+            value,
+            style: const pw.TextStyle(fontSize: 11),
+          ),
+        ),
+      ],
+    );
   }
 
   void _checkInputLength(String text, int requiredLength) {
@@ -444,55 +667,75 @@ class _complaincollectionState extends State<complaincollection> {
                       });
                     }),
                 SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () async {
-                    final complaintSaved = await createservicerequest(
-                        customerNameController.text,
-                        mobileNoController.text,
-                        address1Controller.text +
-                            "," +
-                            address2Controller.text +
-                            "," +
-                            address3Controller.text,
-                        pincode.text,
-                        citycontroller.text,
-                        selectedBrand!,
-                        selectedCategory!,
-                        _selectedValue!,
-                        dateController1.text,
-                        dateController2.text,
-                        complain.text,
-                        request!);
-                    if (!context.mounted) return;
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () async {
+                        final complaintSaved = await createservicerequest(
+                            customerNameController.text,
+                            mobileNoController.text,
+                            address1Controller.text +
+                                "," +
+                                address2Controller.text +
+                                "," +
+                                address3Controller.text,
+                            pincode.text,
+                            citycontroller.text,
+                            selectedBrand!,
+                            selectedCategory!,
+                            _selectedValue!,
+                            dateController1.text,
+                            dateController2.text,
+                            complain.text,
+                            request!);
+                        if (!context.mounted) return;
 
-                    if (!complaintSaved) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text('Complaint registration failed')),
-                      );
-                      return;
-                    }
+                        if (!complaintSaved) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Complaint registration failed')),
+                          );
+                          return;
+                        }
 
-                    final smsSent = await sendComplaintSms(
-                        customerNameController.text,
-                        mobileNoController.text,
-                        selectedBrand!,
-                        _selectedValue!,
-                        request!);
-                    if (!context.mounted) return;
+                        setState(() {
+                          _showPdfButton = true;
+                        });
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          smsSent
-                              ? 'Complaint registered and SMS sent'
-                              : 'Complaint registered, but SMS failed',
+                        final smsSent = await sendComplaintSms(
+                            customerNameController.text,
+                            mobileNoController.text,
+                            selectedBrand!,
+                            _selectedValue!,
+                            request!);
+                        if (!context.mounted) return;
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              smsSent
+                                  ? 'Complaint registered and SMS sent'
+                                  : 'Complaint registered, but SMS failed',
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text("Save"),
+                    ),
+                    if (_showPdfButton) ...[
+                      const SizedBox(width: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _showPdfActions(context),
+                        icon: const Icon(Icons.picture_as_pdf),
+                        label: const Text("Print/Share PDF"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          foregroundColor: Colors.white,
                         ),
                       ),
-                    );
-                    // Add submit logic here
-                  },
-                  child: Text("Save"),
+                    ],
+                  ],
                 ),
               ],
             ),
