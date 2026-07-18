@@ -413,9 +413,39 @@ class _complaincollectionState extends State<complaincollection> {
       String complaint,
       String service) async {
     var url = _addComplaintUrl;
-//var url2='http://localhost:3000/api/addcomplaint';
-//print(datenow.toLocal().toString().split(' ')[0]);
-//print(formattedDate);
+    
+    String? formattedPdate;
+    String? formattedWdate;
+
+    if (pdate.trim().isNotEmpty) {
+      try {
+        List<String> parts = pdate.trim().split('-');
+        if (parts.length == 3) {
+          if (parts[2].length == 4) {
+            formattedPdate = "${parts[2]}-${parts[1]}-${parts[0]}";
+          } else if (parts[0].length == 4) {
+            formattedPdate = pdate.trim();
+          }
+        }
+      } catch (_) {
+        formattedPdate = pdate;
+      }
+    }
+
+    if (wdate.trim().isNotEmpty) {
+      try {
+        List<String> parts = wdate.trim().split('-');
+        if (parts.length == 3) {
+          if (parts[2].length == 4) {
+            formattedWdate = "${parts[2]}-${parts[1]}-${parts[0]}";
+          } else if (parts[0].length == 4) {
+            formattedWdate = wdate.trim();
+          }
+        }
+      } catch (_) {
+        formattedWdate = wdate;
+      }
+    }
 
     try {
       var response = await http.post(Uri.parse(url),
@@ -433,11 +463,10 @@ class _complaincollectionState extends State<complaincollection> {
               "Brand": brand,
               "Category": category,
               "Product name": product,
-              "Purchase date": pdate,
-              "warranty expiry date": wdate,
+              "Purchase date": formattedPdate,
+              "warranty expiry date": formattedWdate,
               "Complain/Remark": complaint,
               "Request Type": service,
-              //      "date of complain":formattedDate
             }
           }));
       if (response.statusCode == 200) {
