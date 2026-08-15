@@ -1,6 +1,6 @@
-//import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'authservice.dart';
+import 'directcomplaintpage.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -213,6 +213,28 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DirectCustomerAuthPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.assignment_turned_in_outlined),
+                label: const Text(
+                  'Direct Complaint Registration for Customer',
+                  style: TextStyle(fontSize: 15),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
