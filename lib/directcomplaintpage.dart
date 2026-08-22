@@ -64,6 +64,10 @@ class _DirectCustomerAuthPageState extends State<DirectCustomerAuthPage> {
           }
         },
         verificationFailed: (FirebaseAuthException e) {
+          debugPrint('══════ FIREBASE AUTH ERROR ══════');
+          debugPrint('Code: ${e.code}');
+          debugPrint('Message: ${e.message}');
+          debugPrint('Details: ${e.stackTrace}');
           if (mounted) {
             setState(() {
               _isLoading = false;
@@ -72,6 +76,7 @@ class _DirectCustomerAuthPageState extends State<DirectCustomerAuthPage> {
           }
         },
         codeSent: (String verificationId, int? resendToken) {
+          debugPrint('══════ OTP CODE SENT ══════: verificationId=$verificationId');
           if (mounted) {
             setState(() {
               _isOtpSent = true;
@@ -82,11 +87,13 @@ class _DirectCustomerAuthPageState extends State<DirectCustomerAuthPage> {
           }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
+          debugPrint('══════ AUTO RETRIEVAL TIMEOUT ══════: $verificationId');
           _verificationId = verificationId;
         },
         forceResendingToken: _resendToken,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('══════ SEND OTP EXCEPTION ══════: $e\n$stack');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -126,17 +133,20 @@ class _DirectCustomerAuthPageState extends State<DirectCustomerAuthPage> {
         smsCode: otp,
       );
       await FirebaseAuth.instance.signInWithCredential(credential);
+      debugPrint('══════ OTP VERIFIED SUCCESSFULLY ══════');
       if (mounted) {
         _navigateToRegistration(formattedPhone);
       }
     } on FirebaseAuthException catch (e) {
+      debugPrint('══════ VERIFY OTP FIREBASE ERROR ══════: ${e.code} - ${e.message}');
       if (mounted) {
         setState(() {
           _isLoading = false;
           _errorMessage = e.message ?? 'Invalid OTP. Please check and try again.';
         });
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('══════ VERIFY OTP EXCEPTION ══════: $e\n$stack');
       if (mounted) {
         setState(() {
           _isLoading = false;
