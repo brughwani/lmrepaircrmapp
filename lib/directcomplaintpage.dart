@@ -49,16 +49,25 @@ class _DirectCustomerAuthPageState extends State<DirectCustomerAuthPage> {
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: formattedPhone,
         verificationCompleted: (PhoneAuthCredential credential) async {
-          await FirebaseAuth.instance.signInWithCredential(credential);
-          if (mounted) {
-            _navigateToRegistration(formattedPhone);
+          try {
+            await FirebaseAuth.instance.signInWithCredential(credential);
+            if (mounted) {
+              _navigateToRegistration(formattedPhone);
+            }
+          } catch (e) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _errorMessage = 'Auto-verification failed: $e';
+              });
+            }
           }
         },
         verificationFailed: (FirebaseAuthException e) {
           if (mounted) {
             setState(() {
               _isLoading = false;
-              _errorMessage = e.message ?? 'OTP verification failed';
+              _errorMessage = e.message ?? 'OTP verification failed (${e.code})';
             });
           }
         },
@@ -79,11 +88,9 @@ class _DirectCustomerAuthPageState extends State<DirectCustomerAuthPage> {
       );
     } catch (e) {
       if (mounted) {
-        // Fallback for development/testing environments
         setState(() {
-          _isOtpSent = true;
           _isLoading = false;
-          _verificationId = 'demo_verification_id';
+          _errorMessage = 'Failed to send OTP: $e';
         });
       }
     }
@@ -98,6 +105,13 @@ class _DirectCustomerAuthPageState extends State<DirectCustomerAuthPage> {
       return;
     }
 
+    if (_verificationId == null) {
+      setState(() {
+        _errorMessage = 'Please request an OTP first';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -107,21 +121,26 @@ class _DirectCustomerAuthPageState extends State<DirectCustomerAuthPage> {
     final formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
 
     try {
-      if (_verificationId != null && _verificationId != 'demo_verification_id') {
-        PhoneAuthCredential credential = PhoneAuthProvider.credential(
-          verificationId: _verificationId!,
-          smsCode: otp,
-        );
-        await FirebaseAuth.instance.signInWithCredential(credential);
-      }
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: otp,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
       if (mounted) {
         _navigateToRegistration(formattedPhone);
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.message ?? 'Invalid OTP. Please check and try again.';
+        });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Invalid OTP. Please check and try again.';
+          _errorMessage = 'Verification failed: $e';
         });
       }
     }
